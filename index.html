@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Google Maps Restaurant</title>
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+    }
+    * {
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+    }
+    #map-canvas {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="map-canvas"></div>
+
+  <script src="//maps.googleapis.com/maps/api/js?key=&lang=ja&callback=drawMap&libraries=places,geometry" async></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.js"></script>
+  <script>
+    const canvas = document.getElementById("map-canvas");
+
+    async function getRestaurant(lat, lon) {
+      try {
+        const res = await axios.get(`https://wa42-kyosuke-server.now.sh/api/restaurant?lat=${lat}&lon=${lon}`)
+        return res.data;
+      } catch(e) {
+        throw e;
+      }
+    }
+
+    function drawMap() {
+      navigator.geolocation.getCurrentPosition(async data => {
+        const { latitude, longitude } = data.coords;
+
+        const map = new google.maps.Map(canvas, {
+          center: new google.maps.LatLng(latitude, longitude),
+          zoom: 17,
+          disableDefaultUI: true
+        })
+
+        // restaurantを取得する
+        try {
+          const restaurants = await getRestaurant(latitude, longitude);
+          for(const r of restaurants) {
+            console.log(r.name)
+            const marker = new google.maps.Marker({
+              position: {
+                lat: parseFloat(r.latitude),
+                lng: parseFloat(r.longitude)
+              },
+              map
+            })
+
+            marker.addListener("click", () => {
+              new google.maps.InfoWindow({
+                content: `<p>${r.name}</p>`
+              }).open(map, marker)
+            })
+          }
+        } catch(e) {
+          console.error(e);
+        }
+
+      }, err => console.error(err))
+    }
+  </script>
+</body>
+</html>
